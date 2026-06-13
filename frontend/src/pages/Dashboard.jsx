@@ -38,22 +38,7 @@ export default function Dashboard() {
     }
   }, [user?.token]);
 
-  useEffect(() => {
-    // Fetch AI insights
-    const fetchInsights = async () => {
-      try {
-        const { data } = await api.post('/ai/insights', {
-          portfolioData: portfolio
-        });
-        setAiInsights(data.insights);
-      } catch (error) {
-        setAiInsights('AI analysis currently unavailable.');
-      }
-    };
-    if (user?.token && portfolio.length >= 0) { // Fetch even if empty for general advice
-        fetchInsights();
-    }
-  }, [portfolio, user?.token]);
+
 
   // Calculate stats
   const totalInvested = portfolio.reduce((acc, item) => acc + (item.quantity * item.averageBuyPrice), 0);
@@ -168,23 +153,7 @@ export default function Dashboard() {
 
         {/* AI Assistant & Live Prices */}
         <div className="col-span-3 space-y-4 flex flex-col">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex-1 bg-gradient-to-br from-primary/10 to-accent/5 backdrop-blur-md rounded-2xl border border-primary/20 p-6 shadow-sm overflow-hidden relative"
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Activity className="w-24 h-24" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2 flex items-center">
-              <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full mr-2">AI</span>
-              Stock Assistant
-            </h3>
-            <p className="text-sm text-foreground/80 leading-relaxed overflow-y-auto max-h-[120px]">
-              {aiInsights}
-            </p>
-          </motion.div>
+         
 
           <motion.div
             initial={{ opacity: 0, x: 20 }}
