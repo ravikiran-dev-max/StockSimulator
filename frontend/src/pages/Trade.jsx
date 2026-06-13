@@ -27,6 +27,9 @@ export default function Trade() {
   const [symbol, setSymbol] = useState('AAPL');
   const [action, setAction] = useState('BUY'); // 'BUY' or 'SELL'
   const [quantity, setQuantity] = useState('');
+  const [price, setPrice] = useState('');
+  const [isManualPrice, setIsManualPrice] = useState(false);
+  const [priceError, setPriceError] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [isTrading, setIsTrading] = useState(false);
   const [tradeMessage, setTradeMessage] = useState(null);
@@ -98,7 +101,37 @@ export default function Trade() {
   // Dynamic values
   const currentPrice = livePrices[symbol] ? parseFloat(livePrices[symbol]) : 0;
   const parsedQty = parseFloat(quantity) || 0;
-  const estimatedTotal = parsedQty * currentPrice;
+  const parsedPrice = parseFloat(price) || 0;
+  const estimatedTotal = parsedQty * parsedPrice;
+
+  // Reset manual price flag on symbol switch
+  useEffect(() => {
+    setIsManualPrice(false);
+    setPrice('');
+  }, [symbol]);
+
+  // Sync price with live tick unless user is typing manually
+  useEffect(() => {
+    if (currentPrice > 0 && !isManualPrice) {
+      setPrice(currentPrice.toString());
+    }
+  }, [currentPrice, isManualPrice]);
+
+  // Validate price field
+  useEffect(() => {
+    if (price === '') {
+      setPriceError('Price is required');
+    } else {
+      const p = parseFloat(price);
+      if (isNaN(p)) {
+        setPriceError('Price must be a valid number');
+      } else if (p <= 0) {
+        setPriceError('Price must be greater than 0');
+      } else {
+        setPriceError(null);
+      }
+    }
+  }, [price]);
 
   // Stock history chart data
   const historyData = priceHistory[symbol] || [];
@@ -112,7 +145,8 @@ export default function Trade() {
   const ownedShares = portfolio.find((item) => item.symbol === symbol)?.quantity || 0;
   const isInsufficientFunds = action === 'BUY' && estimatedTotal > user.balance;
   const isInsufficientShares = action === 'SELL' && parsedQty > ownedShares;
-  const isValidTrade = parsedQty > 0 && !isInsufficientFunds && !isInsufficientShares;
+  const isInvalidPrice = !price || isNaN(parsedPrice) || parsedPrice <= 0;
+  const isValidTrade = parsedQty > 0 && !isInvalidPrice && !isInsufficientFunds && !isInsufficientShares;
 
   const handleTradeSubmit = async (e) => {
     e.preventDefault();
@@ -123,7 +157,7 @@ export default function Trade() {
     setErrorMessage(null);
 
     const endpoint = action === 'BUY' ? 'buy' : 'sell';
-    const totalOrderValue = quantity * currentPrice;
+    const totalOrderValue = parsedQty * parsedPrice;
 
     try {
       const { data } = await api.post(
@@ -131,7 +165,7 @@ export default function Trade() {
         {
           symbol,
           quantity: parsedQty,
-          currentPrice
+          price: parsedPrice
         }
       );
 
@@ -145,7 +179,7 @@ export default function Trade() {
       // Log Success Notification
       addNotification(
         `Order Successful: ${action}`,
-        `Successfully ${action === 'BUY' ? 'purchased' : 'sold'} ${parsedQty} shares of ${symbol} at $${currentPrice.toFixed(2)} each (Total: $${totalOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).`
+        `Successfully ${action === 'BUY' ? 'purchased' : 'sold'} ${parsedQty} shares of ${symbol} at $${parsedPrice.toFixed(2)} each (Total: $${totalOrderValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).`
       );
 
       // Refresh portfolio and transaction log
@@ -335,6 +369,52 @@ export default function Trade() {
               </div>
 
               <form onSubmit={handleTradeSubmit} className="space-y-4">
+                {/* Price Input */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-semibold text-muted-foreground">Order Price (USD)</label>
+                    {isManualPrice && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManualPrice(false);
+                          if (currentPrice > 0) {
+                            setPrice(currentPrice.toString());
+                          }
+                        }}
+                        className="text-[10px] text-primary hover:underline font-bold"
+                      >
+                        Reset to Live
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      required
+                      placeholder="0.00"
+                      value={price}
+                      onChange={(e) => {
+                        setIsManualPrice(true);
+                        setPrice(e.target.value);
+                      }}
+                      className={`w-full bg-input/40 border ${
+                        priceError ? 'border-destructive focus:ring-destructive/50' : 'border-border focus:ring-primary/50'
+                      } rounded-xl py-2 px-4 text-foreground focus:outline-none focus:ring-2 transition-all font-semibold text-sm`}
+                    />
+                    {!isManualPrice && currentPrice > 0 && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] bg-green-500/10 text-green-500 border border-green-500/20 px-1.5 py-0.5 rounded font-bold uppercase animate-pulse">
+                        Live
+                      </span>
+                    )}
+                  </div>
+                  {priceError && (
+                    <p className="text-[10px] text-destructive font-semibold mt-1">{priceError}</p>
+                  )}
+                </div>
+
                 {/* Quantity Input */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground">Order Quantity (Shares)</label>
@@ -359,11 +439,7 @@ export default function Trade() {
 
                 {/* Estimate box */}
                 <div className="bg-muted/30 border border-border/50 p-3.5 rounded-xl text-xs space-y-1">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Estimated Price</span>
-                    <span>${currentPrice.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-foreground border-t border-border/40 pt-1.5 mt-1.5">
+                  <div className="flex justify-between font-bold text-foreground">
                     <span>Est. Total {action === 'BUY' ? 'Cost' : 'Credit'}</span>
                     <span>${estimatedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>

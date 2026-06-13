@@ -6,7 +6,7 @@ import { currentPrices } from '../utils/stockPrices.js';
 
 // Buy stock
 export const buyStock = async (req, res, next) => {
-  const { symbol, quantity, currentPrice } = req.body;
+  const { symbol, quantity, price: bodyPrice, currentPrice } = req.body;
   const userId = req.user._id;
 
   try {
@@ -18,7 +18,7 @@ export const buyStock = async (req, res, next) => {
     }
 
     const qty = Number(quantity);
-    const price = Number(currentPrice);
+    const price = Number(bodyPrice !== undefined ? bodyPrice : currentPrice);
 
     if (isNaN(qty) || qty <= 0) {
       res.status(400);
@@ -80,7 +80,7 @@ export const buyStock = async (req, res, next) => {
 
 // Sell stock
 export const sellStock = async (req, res, next) => {
-  const { symbol, quantity, currentPrice } = req.body;
+  const { symbol, quantity, price: bodyPrice, currentPrice } = req.body;
   const userId = req.user._id;
 
   try {
@@ -92,7 +92,7 @@ export const sellStock = async (req, res, next) => {
     }
 
     const qty = Number(quantity);
-    const price = Number(currentPrice);
+    const price = Number(bodyPrice !== undefined ? bodyPrice : currentPrice);
 
     if (isNaN(qty) || qty <= 0) {
       res.status(400);
