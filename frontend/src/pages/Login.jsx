@@ -38,7 +38,7 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome Back</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your AntiGravity account</p>
+          <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
 
         {error && (
