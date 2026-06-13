@@ -31,7 +31,8 @@ function App() {
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
-    const socket = io('http://localhost:5001');
+    const socketUrl = import.meta.env.VITE_API_URL || 'https://stocksimulator-pncv.onrender.com';
+    const socket = io(socketUrl);
     
     socket.on('connect', () => {
       console.log('Connected to socket server');
